@@ -18,4 +18,6 @@ The depth in meters that this node will search the Point cloud for corespoinding
 
 ## Inputs
 
+### /zed/point_cloud/cloud_registered
+
 ## Outputs
