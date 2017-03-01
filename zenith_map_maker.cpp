@@ -16,16 +16,17 @@
 #include <pcl/segmentation/extract_clusters.h>
 #include <boost/foreach.hpp>
 
-#include<zenith_obstacle_detector/Obstacle.h>
-#include<zenith_obstacle_detector/ObstacleList.h>
+int img_width = 500;
+int img_height = 500;
+
+float scan_width = 5;
+float scan_depth = 5;
 
 ros::Publisher filter_pub, voxel_pub, ObsArray_pub;
 
   // All the objects needed
-//  pcl::PCDReader reader;
   pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;
   pcl::SACSegmentationFromNormals<pcl::PointXYZRGB, pcl::Normal> seg; 
-//  pcl::PCDWriter writer;
   pcl::ExtractIndices<pcl::PointXYZRGB> extract;
 //  pcl::ExtractIndices<pcl::Normal> extract_normals;
 
@@ -53,20 +54,20 @@ void zed_pointcloud_callback(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& 
  
   pass.setInputCloud (zed_point_cloud);
   pass.setFilterFieldName ("z");
-  pass.setFilterLimits (-0.3, 1);
+  pass.setFilterLimits (-0.3, -1);
   //pass.setFilterLimitsNegative (true);
   pass.filter (*cloud_filteredz);
 
   pass.setInputCloud (cloud_filteredz);
   pass.setFilterFieldName ("y");
-  pass.setFilterLimits (-3, 3);
+  pass.setFilterLimits (-scan_width/2, scan_width/2);
   //pass.setFilterLimitsNegative (true);
   pass.filter (*cloud_filteredy);
 
 
   pass.setInputCloud (cloud_filteredy);
   pass.setFilterFieldName ("x");
-  pass.setFilterLimits (0.3, 4);
+  pass.setFilterLimits (0.01, scan_depth);
   //pass.setFilterLimitsNegative (true);
   pass.filter (*cloud_filteredx);
 
@@ -76,6 +77,9 @@ void zed_pointcloud_callback(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& 
 
   ROS_INFO("Published Position Filter Point Cloud");
 
+//Temporaryly removing sub sampling
+cloud_filtered_final = cloud_filteredx;
+/*
   // Create the filtering object
   pcl::VoxelGrid<pcl::PointXYZRGB> sor;
   sor.setInputCloud (cloud_filteredx);
@@ -87,109 +91,9 @@ void zed_pointcloud_callback(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& 
   voxel_pub.publish (cloud_filtered_final);
 
   ROS_INFO("Published Voxel Filter Point Cloud");
-
-//Start Ken clustering Segmentation
-
-  tree->setInputCloud (cloud_filtered_final);
-
-  std::vector<pcl::PointIndices> cluster_indices;
-  pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> ec;
-  ec.setClusterTolerance (0.02); // 2cm
-  ec.setMinClusterSize (400);
-  ec.setMaxClusterSize (25000);
-  ec.setSearchMethod (tree);
- ec.setInputCloud (cloud_filtered_final);
-  ec.extract (cluster_indices);
-
-  zenith_obstacle_detector::ObstacleList obs_list;
-
-  int j = 0;
-  for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
-  {
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZRGB>);
-    for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit)
-    cloud_cluster->points.push_back (cloud_filtered_final->points[*pit]); //*
-    cloud_cluster->width = cloud_cluster->points.size ();
-    cloud_cluster->height = 1;
-    cloud_cluster->is_dense = true;
-
-    pcl::PointXYZRGB max;
-    pcl::PointXYZRGB min;
-    pcl::getMinMax3D(*cloud_cluster, min, max);
-
-    zenith_obstacle_detector::Obstacle obs; 
-
-    float xcenter, ycenter, xsize, ysize, zsize;
-    xcenter = (max.x + min.x)/2;
-    ycenter = (max.y + min.y)/2;
-
-    xsize = (max.x - min.x);
-    ysize = (max.y - min.y);
-    zsize = (max.z - min.z);
-
-    obs.x = xcenter;
-    obs.y = ycenter;
-    
-    if(ysize > .45 && ysize < 333){
-       obs.type = "moving";
-    }else if(ysize > .08 && ysize < .25){
-       obs.type = "static";
-    }else{
-       obs.type = "unkown";
-    }
-
-    obs_list.obstacles.push_back(obs);
-
-    ROS_INFO_STREAM("PointCloud representing the Cluster: " << j << " Has " << cloud_cluster->points.size () << " data points.");
-    ROS_INFO_STREAM("Center x:" << xcenter << " y:" << ycenter << " z:" << (max.z + min.z)/2);
-    ROS_INFO_STREAM("Size x:" << xsize << " y:" << ysize << " z:" << zsize);
-    j++;
-  }
-
-  ObsArray_pub.publish(obs_list);
-
-//END Ken clustering Segmentation
-
-
-//Start Ken Planer Suface Segmentation Attempt
-/*
-    // Estimate point normals
-  ne.setSearchMethod (tree);
-  ne.setInputCloud (cloud_filtered_final);
-  ne.setKSearch (10);
-  ne.compute (*cloud_normals);
-  ROS_INFO("Norms Computed");
-
-  // Create the segmentation object for the planar model and set all the parameters
-  seg.setOptimizeCoefficients (true);
-  seg.setModelType (pcl::SACMODEL_NORMAL_PLANE);
-  seg.setNormalDistanceWeight (0.1);
-  seg.setMethodType (pcl::SAC_RANSAC);
-  seg.setMaxIterations (100);
-  seg.setDistanceThreshold (0.03);
-  seg.setInputCloud (cloud_filtered_final);
-  seg.setInputNormals (cloud_normals);
-  // Obtain the plane inliers and coefficients
-  seg.segment (*inliers_plane, *coefficients_plane);
-  ROS_INFO_STREAM("Plane coefficients: " << *coefficients_plane << std::endl);
-  ROS_INFO("Planner Segmentation Complete");
-  // Extract the planar inliers from the input cloud
-  extract.setInputCloud (cloud_filtered_final);
-  extract.setIndices (inliers_plane);
-  extract.setNegative (false);
-
-  // Write the planar inliers to disk
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_plane (new pcl::PointCloud<pcl::PointXYZRGB> ());
-  extract.filter (*cloud_plane);
-  ROS_INFO("Planner Extraction Complete");
-  ROS_INFO("PointCloud representing the planar component: %d data points.");
-//  writer.write ("table_scene_mug_stereo_textured_plane.pcd", *cloud_plane, false);
-
-  plane_pub.publish (cloud_plane);
-
-  ROS_INFO("Planner Extraction Published");
 */
-//END Ken Planer Segmentation
+
+
 }
 
 int main(int argc, char** argv)
