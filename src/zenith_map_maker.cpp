@@ -14,6 +14,13 @@
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/extract_clusters.h>
+
+#include <image_transport/image_transport.h>
+#include <cv_bridge/cv_bridge.h>
+#include <sensor_msgs/image_encodings.h>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
 #include <boost/foreach.hpp>
 
 int img_width = 500;
@@ -22,10 +29,13 @@ int img_height = 500;
 float scan_width = 5;
 float scan_depth = 5;
 
-float step_width = scan_width/imd_width;
+float step_width = scan_width/img_width;
 float step_depth = scan_depth/img_height;
 
 ros::Publisher filter_pub, voxel_pub, ObsArray_pub;
+
+image_transport::ImageTransport it_;
+image_transport::Publisher image_pub_;
 
   // All the objects needed
   pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;
@@ -104,5 +114,6 @@ int main(int argc, char** argv)
   filter_pub = nh.advertise<pcl::PointCloud<pcl::PointXYZRGB> >("zed_filtered_pointcloud", 1); 
   voxel_pub = nh.advertise<pcl::PointCloud<pcl::PointXYZRGB> >("zed_voxel_pointcloud", 1);
   ros::Subscriber sub = nh.subscribe<pcl::PointCloud<pcl::PointXYZRGB> >("/zed/point_cloud/cloud_registered", 1, zed_pointcloud_callback);
+  image_pub_ = it_.advertise("/image_converter/output_video", 1);
   ros::spin();
 }

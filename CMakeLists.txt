@@ -46,6 +46,9 @@ add_executable(zenith_map_maker src/zenith_map_maker.cpp)
 target_link_libraries(zenith_map_maker ${catkin_LIBRARIES})
 add_dependencies(zenith_map_maker ${PROJECT_NAME}_gencpp)
 
+find_package(OpenCV)
+include_directories(${OpenCV_INCLUDE_DIRS})
+target_link_libraries(zenith_map_maker ${OpenCV_LIBRARIES})
 #############
 ## Testing ##
 #############
