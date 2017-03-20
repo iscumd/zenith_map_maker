@@ -54,7 +54,7 @@ void zed_pointcloud_callback(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& 
  
   pass.setInputCloud (zed_point_cloud);
   pass.setFilterFieldName ("z");
-  pass.setFilterLimits (-0.3, -1);
+  pass.setFilterLimits (-1, -0.3);
   //pass.setFilterLimitsNegative (true);
   pass.filter (*cloud_filteredz);
 
