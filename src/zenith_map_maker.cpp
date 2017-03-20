@@ -101,7 +101,6 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "zed_pcl_segmenter");
   ros::NodeHandle nh;
   filter_pub = nh.advertise<pcl::PointCloud<pcl::PointXYZRGB> >("zed_filtered_pointcloud", 1); 
-  ObsArray_pub = nh.advertise<zenith_obstacle_detector::ObstacleList>("zenith/obstacles", 1);
   voxel_pub = nh.advertise<pcl::PointCloud<pcl::PointXYZRGB> >("zed_voxel_pointcloud", 1);
   ros::Subscriber sub = nh.subscribe<pcl::PointCloud<pcl::PointXYZRGB> >("/zed/point_cloud/cloud_registered", 1, zed_pointcloud_callback);
   ros::spin();
