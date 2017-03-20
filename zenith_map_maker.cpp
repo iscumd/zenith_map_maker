@@ -22,6 +22,9 @@ int img_height = 500;
 float scan_width = 5;
 float scan_depth = 5;
 
+float step_width = scan_width/imd_width;
+float step_depth = scan_depth/img_height;
+
 ros::Publisher filter_pub, voxel_pub, ObsArray_pub;
 
   // All the objects needed
@@ -78,12 +81,11 @@ void zed_pointcloud_callback(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& 
   ROS_INFO("Published Position Filter Point Cloud");
 
 //Temporaryly removing sub sampling
-cloud_filtered_final = cloud_filteredx;
-/*
+//cloud_filtered_final = cloud_filteredx;
   // Create the filtering object
   pcl::VoxelGrid<pcl::PointXYZRGB> sor;
   sor.setInputCloud (cloud_filteredx);
-  sor.setLeafSize (0.01f, 0.01f, 0.01f);
+  sor.setLeafSize (step_depth, step_width, 10.0);
   sor.filter (*cloud_filtered_final);
 
   ROS_INFO("Point Cloud After Voxel Filter %d Points", cloud_filtered_final->points.size());
@@ -91,7 +93,6 @@ cloud_filtered_final = cloud_filteredx;
   voxel_pub.publish (cloud_filtered_final);
 
   ROS_INFO("Published Voxel Filter Point Cloud");
-*/
 
 
 }
@@ -101,7 +102,6 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "zed_pcl_segmenter");
   ros::NodeHandle nh;
   filter_pub = nh.advertise<pcl::PointCloud<pcl::PointXYZRGB> >("zed_filtered_pointcloud", 1); 
-  ObsArray_pub = nh.advertise<zenith_obstacle_detector::ObstacleList>("zenith/obstacles", 1);
   voxel_pub = nh.advertise<pcl::PointCloud<pcl::PointXYZRGB> >("zed_voxel_pointcloud", 1);
   ros::Subscriber sub = nh.subscribe<pcl::PointCloud<pcl::PointXYZRGB> >("/zed/point_cloud/cloud_registered", 1, zed_pointcloud_callback);
   ros::spin();
