@@ -11,6 +11,8 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   sensor_msgs
   message_generation
+  cv_bridge
+  image_transport
 )
 
 ## Generate messages in the 'msg' folder

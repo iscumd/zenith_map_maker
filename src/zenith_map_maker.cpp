@@ -34,8 +34,8 @@ float step_depth = scan_depth/img_height;
 
 ros::Publisher filter_pub, voxel_pub, ObsArray_pub;
 
-image_transport::ImageTransport it_;
-image_transport::Publisher image_pub_;
+//image_transport::ImageTransport it;
+image_transport::Publisher image_pub;
 
   // All the objects needed
   pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;
@@ -53,6 +53,10 @@ image_transport::Publisher image_pub_;
 
 void zed_pointcloud_callback(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& zed_point_cloud)
 {
+
+  cv::Mat image = cv::Mat::zeros(img_height, img_width, CV_8UC3); 
+
+
   ROS_INFO("Point Cloud Received With %d Points", zed_point_cloud->points.size());
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filteredz (new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -104,6 +108,11 @@ void zed_pointcloud_callback(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& 
 
   ROS_INFO("Published Voxel Filter Point Cloud");
 
+  sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image).toImageMsg();
+
+//  sensor_msgs::ImagePtr msg = cv_bridge::CvImage(zed_point_cloud->header, "bgr8", image).toImageMsg();
+
+  image_pub.publish(msg);
 
 }
 
@@ -111,9 +120,10 @@ int main(int argc, char** argv)
 {
   ros::init(argc, argv, "zed_pcl_segmenter");
   ros::NodeHandle nh;
+  image_transport::ImageTransport it(nh);
   filter_pub = nh.advertise<pcl::PointCloud<pcl::PointXYZRGB> >("zed_filtered_pointcloud", 1); 
   voxel_pub = nh.advertise<pcl::PointCloud<pcl::PointXYZRGB> >("zed_voxel_pointcloud", 1);
   ros::Subscriber sub = nh.subscribe<pcl::PointCloud<pcl::PointXYZRGB> >("/zed/point_cloud/cloud_registered", 1, zed_pointcloud_callback);
-  image_pub_ = it_.advertise("/image_converter/output_video", 1);
+  image_pub = it.advertise("/ZED/TopDownView", 1);
   ros::spin();
 }
